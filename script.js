@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show chat module
     const startButton = document.getElementById('start-processing');
     const chatModule = document.getElementById('chat-module');
+    const chatInputSection = document.querySelector('#chat-module .flex.items-center'); // the input + send button container
+const startFinalProcessing = document.getElementById('start-final-processing');
+
+
     
     if (startButton && chatModule) {
         startButton.addEventListener('click', function(e) {
@@ -36,10 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // File upload interaction
 const fileUpload = document.getElementById('file-upload');
     const uploadSection = document.querySelector('.border-dashed');
-    
+    let uploadedFilesArray = [];
     if (fileUpload && uploadSection) {
         fileUpload.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
+                uploadedFilesArray = Array.from(e.target.files);
                 uploadSection.classList.add('border-indigo-400', 'bg-indigo-50');
                 uploadSection.querySelector('p').textContent = e.target.files[0].name;
                 uploadSection.querySelector('i').setAttribute('data-feather', 'file-text');
@@ -80,6 +85,7 @@ const fileUpload = document.getElementById('file-upload');
             const dt = e.dataTransfer;
             const files = dt.files;
             fileUpload.files = files;
+            uploadedFilesArray = Array.from(files);
             uploadSection.querySelector('p').textContent = files[0].name;
             uploadSection.querySelector('i').setAttribute('data-feather', 'file-text');
             feather.replace();
@@ -100,9 +106,8 @@ const fileUpload = document.getElementById('file-upload');
     const chatInput = document.getElementById('chat-input');
     const sendButton = document.getElementById('send-button');
     const questions = [
-        "2. Should the dashboard include dark mode support from the initial release?",
-        "3. For the notification system, do you want in-app notifications only or also email/SMS alerts?",
-        "4. Would you like me to create subtasks for each story component?"
+        "2. How many minimum subtasks should be created for each story?",
+        "3. For the notification system, do you want notifications through email alerts?"
     ];
 let currentQuestion = 0;
 
@@ -141,6 +146,29 @@ let currentQuestion = 0;
             // Auto scroll to bottom
             chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+else{
+
+// All questions answered → hide input + show button
+    chatInputSection.classList.add("hidden");
+    startFinalProcessing.classList.remove("hidden");
+
+    const finalMessage = document.createElement('div');
+    finalMessage.className = 'flex items-start';
+    finalMessage.innerHTML = `
+        <div class="bg-indigo-100 p-3 rounded-full mr-3">
+            <i data-feather="cpu" class="text-indigo-600 w-5 h-5"></i>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow-sm max-w-3/4">
+            <p class="text-gray-800 font-semibold">
+                Great! I have all the information I need.  
+                Click <strong>Start Processing</strong> to generate your JIRA stories.
+            </p>
+        </div>
+    `;
+    chatContainer.appendChild(finalMessage);
+    feather.replace();
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
     }
 
     if (sendButton && chatInput) {
@@ -167,4 +195,84 @@ let currentQuestion = 0;
 }
         });
     }
+
+     if (startFinalProcessing) {
+
+    // UI Error Box Function
+    function showUIError(message) {
+        const chatContainer = document.getElementById("chat-container");
+
+        const errorBox = document.createElement("div");
+        errorBox.className =
+            "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative my-3";
+        errorBox.innerHTML = `
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline ml-1">${message}</span>
+        `;
+
+        chatContainer.appendChild(errorBox);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // UI Success Box Function
+    function showUISuccess(message) {
+        const chatContainer = document.getElementById("chat-container");
+
+        const successBox = document.createElement("div");
+        successBox.className =
+            "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative my-3";
+        successBox.innerHTML = `
+            <strong class="font-bold">Success:</strong>
+            <span class="block sm:inline ml-1">${message}</span>
+        `;
+
+        chatContainer.appendChild(successBox);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    startFinalProcessing.addEventListener('click', async function () {
+
+        
+        try {
+            const formData = new FormData();
+            uploadedFilesArray.forEach(file => formData.append('file', file));
+
+            // Optional metadata
+            formData.append('uploadedBy', 'admin');
+            formData.append('jsonPrompt', JSON.stringify({ key: 'value' }));
+
+            const response = await fetch('http://localhost:8080/api/v1/files/upload-file', {
+                method: 'POST',
+                body: formData
+            });
+
+            // CASE 2 — Server returned error HTTP status
+            if (!response.ok) {
+                showUIError(`Upload failed! Server returned status ${response.status}.`);
+                return;
+            }
+
+            // CASE 3 — Response JSON is broken
+            let result = null;
+            try {
+                result = await response.json();
+            } catch (jsonErr) {
+                showUIError("Server returned invalid JSON.");
+                return;
+            }
+
+            console.log("Server response:", result);
+
+            // CASE 4 — SUCCESS
+            showUISuccess("Files successfully sent to the server!");
+
+        } catch (error) {
+            // CASE 5 — Network error / server unreachable / browser blocked request
+            console.error("Upload error:", error);
+            showUIError("Unexpected error occurred while uploading. Please check console for details.");
+        }
+    });
+}
+
+
 });
