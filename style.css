@@ -25,6 +25,7 @@ html {
   scroll-behavior: smooth;
 }
 
+
 .container {
   width: 100%;
   max-width: 1440px;
@@ -150,3 +151,4 @@ html {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
 }
+
