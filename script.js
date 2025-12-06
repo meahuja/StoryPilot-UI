@@ -241,7 +241,7 @@ else{
             formData.append('uploadedBy', 'admin');
             formData.append('jsonPrompt', JSON.stringify({ key: 'value' }));
 
-            const response = await fetch('http://localhost:8080/api/v1/files/upload-file', {
+            const response = await fetch('https://storypilot-backend.onrender.com/api/v1/files/upload-file', {
                 method: 'POST',
                 body: formData
             });
